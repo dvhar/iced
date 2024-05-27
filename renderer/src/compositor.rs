@@ -32,7 +32,17 @@ impl crate::graphics::Compositor for Compositor {
         let mut error = Error::GraphicsAdapterNotFound;
 
         for candidate in candidates {
-            match candidate.build(settings, compatible_window.clone()) {
+            let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(||{
+                candidate.build(settings, compatible_window.clone())
+            }));
+            let comp_result = match caught {
+                Ok(comp) => comp,
+                Err(_) => {
+                    eprintln!("Caught panic in wgpu");
+                    return Err(error);
+                },
+            };
+            match comp_result {
                 Ok(compositor) => return Ok(compositor),
                 Err(new_error) => {
                     error = new_error;
